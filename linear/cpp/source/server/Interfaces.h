@@ -19,6 +19,7 @@ class Constants
 
      static CLSID CLSID_EquationSolver;
      static CLSID CLSID_ESolverClassFactory;
+     static IID IID_IDispatch;
 };
 
 class IEquationX : public IUnknown

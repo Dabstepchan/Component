@@ -2,10 +2,11 @@
 
 #include "Interfaces.h"
 
-class EquationSolver : public IEquationX, public IEquationY
+class EquationSolver : public IEquationX, public IEquationY, public IDispatch
 {
     private:
         int refCount;
+        int equationCount;
     public:
         EquationSolver();
         
@@ -15,6 +16,14 @@ class EquationSolver : public IEquationX, public IEquationY
 
         virtual HRESULT __stdcall CreateSystem(const std::vector<std::vector<double>>& matrix, const std::vector<double>& vector, std::vector<std::vector<double>>& slauMatrix, std::vector<double>& slauVector);
         virtual HRESULT __stdcall CalculateDeterminant(const std::vector<std::vector<double>>& matrix);
+        
+        virtual HRESULT __stdcall GetIDsOfNames(REFIID riid, LPOLESTR* rgszNames, UINT cNames, LCID lcid, DISPID* rgDispId);
+	    virtual HRESULT __stdcall Invoke(DISPID dispIdMember, REFIID riid, LCID lcid, WORD wFlags, DISPPARAMS* pDispParams,VARIANT* pVarResult,
+                                    EXCEPINFO* pExcepInfo, UINT* puArgErr);
+
+        virtual HRESULT __stdcall GetTypeInfoCount(UINT* pctinfo);
+	    virtual HRESULT __stdcall GetTypeInfo(UINT iTInfo, LCID lcid, ITypeInfo** ppTInfo);
+
         ~EquationSolver();
 };
 

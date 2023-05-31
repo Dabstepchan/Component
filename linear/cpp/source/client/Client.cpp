@@ -1,17 +1,19 @@
 #include "lib/interfaces.h"
 #include "lib/interfaces2.h"
-#include "wrapper.h"
+//#include "wrapper.h"
 #include <objbase.h>
 
 #include <vector>
 #include <iostream>
 
+const IID IID_NULL_ = {0x00000000,0x0000,0x0000,{0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}};
 IID Constants::IID_IUnknown = {0x00000000,0x0000,0x0000,{0xC0,0x00,0x00,0x00,0x00,0x00,0x00,0x46}};
 IID Constants::IID_IClassFactory = {0x00000100,0x0000,0x0000,{0xC0,0x00,0x00,0x00,0x00,0x00,0x00,0x46}};
 
 IID Constants::IID_IEquationX = {0x00000001,0x0000,0x0000,{0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}};
 IID Constants::IID_IEquationY = {0x00000002,0x0000,0x0000,{0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}};
 IID Constants::IID_ClassFactory = {0x00000101,0x0000,0x0000,{0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}};
+IID Constants::IID_IDispatch = {0x00020400,0x0000,0x0000,{0xC0,0x00,0x00,0x00,0x00,0x00,0x00,0x46}};
 
 //{4399E097-D19C-480D-90EE-1AA25B858D31}
 CLSID Constants::CLSID_EquationSolver = {0x4399E097,0xD19C,0x480D,{0x90,0xEE,0x1A,0xA2,0x5B,0x85,0x8D,0x31}};
@@ -24,73 +26,104 @@ CLSID Constants2::CLSID_AdvEquationSolver = {0x4BFDC92A,0xA7F7,0x4491,{0xAF,0xC7
 
 int main()
 {
-    std::cout << "Client main start" << std::endl;
+    std::cout<<"Client main start"<<std::endl;
 
-    try
+    CoInitialize(NULL);
+
+    std::vector<std::vector<double>> matrix = {{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}};
+    std::vector<double> vector = {1.0, 2.0, 3.0};
+    std::vector<std::vector<double>> slauMatrix;
+    std::vector<double> slauVector;
+
+    CLSID CLSID_EquationSolver;
     {
-        std::cout << "Standard class factory" << std::endl;
-        CEquationSolver solver;
+        const wchar_t* progID = L"EQS.Application";
 
-        std::vector<std::vector<double>> matrix = {{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}};
-        std::vector<double> vector = {1.0, 2.0, 3.0};
-        std::vector<std::vector<double>> slauMatrix;
-        std::vector<double> slauVector;
-
-        HRESULT hr = solver.CreateSystem(matrix, vector, slauMatrix, slauVector);
-        if (SUCCEEDED(hr))
+        HRESULT resCLSID = CLSIDFromProgID(progID, &CLSID_EquationSolver);
+        
+        if (!SUCCEEDED(resCLSID))
         {
-            std::cout << "SLAU Matrix:" << std::endl;
-            for (const auto& row : slauMatrix)
-            {
-                for (const auto& element : row)
-                {
-                    std::cout << element << " ";
-                }
-                std::cout << std::endl;
-            }
-
-            std::cout << "SLAU Vector:" << std::endl;
-            for (const auto& element : slauVector)
-            {
-                std::cout << element << " ";
-            }
-            std::cout << std::endl;
-        }
-        else
-        {
-            std::cout << "Failed to create SLAU system" << std::endl;
-        }
-
-        hr = solver.CalculateDeterminant(matrix);
-        if (SUCCEEDED(hr))
-        {
-            std::cout << "Determinant calculated successfully" << std::endl;
-        }
-        else
-        {
-            std::cout << "Failed to calculate determinant" << std::endl;
-        }
-
-        std::vector<double> solution;
-        hr = solver.SolveSystemDecomposition(matrix, vector, solution);
-        if (SUCCEEDED(hr))
-        {
-            std::cout << "Solution to the system:" << std::endl;
-            for (const auto& element : solution)
-            {
-                std::cout << element << " ";
-            }
-            std::cout << std::endl;
-        }
-        else
-        {
-            std::cout << "Failed to solve the system" << std::endl;
+            std::cout<<"NO CLSID"<<std::endl;
         }
     }
-    catch (EEquationSolver& e)
+
+    IClassFactory* PCF = NULL;
+    HRESULT resFactory = CoGetClassObject(Constants::CLSID_EquationSolver, CLSCTX_INPROC_SERVER, NULL, Constants::IID_IClassFactory, (void**) &PCF);
+    if (!SUCCEEDED(resFactory))
     {
-        std::cout << e.GetMessage() << std::endl;
+        std::cout<<"No factory"<<std::endl;
     }
+
+    IEquationX* iex = NULL;
+    HRESULT resInstance = PCF->CreateInstance(NULL, Constants::IID_IEquationX, (void**) &iex);
+    if (!SUCCEEDED(resInstance))
+    {
+        std::cout<<"No instance"<<std::endl;
+    }
+
+    IEquationY* iey = NULL;
+    HRESULT resQuery = iex->QueryInterface(Constants::IID_IEquationY, (void**) &iey);
+    if (!SUCCEEDED(resQuery))
+    {
+        std::cout<<"No query"<<std::endl;
+    }
+
+    iex->CreateSystem(matrix, vector, slauMatrix, slauVector);
+
+    IDispatch* pDisp = NULL;
+    HRESULT resQueryDisp = iex->QueryInterface(Constants::IID_IDispatch,(void**)&pDisp);
+    if (!(SUCCEEDED(resQueryDisp)))
+    {
+        std::cout<<"No query dispatch";
+    }
+
+    DISPID dispid;
+    int namesCount = 1;
+    OLECHAR** names = new OLECHAR*[namesCount];
+    OLECHAR* name = const_cast<OLECHAR*>(L"CalculateDeterminant");
+    names[0] = name;
+    HRESULT resID_Name = pDisp->GetIDsOfNames(
+                                                IID_NULL_,
+                                                names,
+                                                namesCount,
+                                                GetUserDefaultLCID(),
+                                                &dispid
+                                            );
+    if (!(SUCCEEDED(resID_Name)))
+    {
+        std::cout<<"No id of name"<<std::endl;
+    }
+    else
+    {
+         DISPPARAMS dispparamsNoArgs = {
+                                         NULL,
+                                         NULL,
+                                         0,
+                                         0,
+                                       };
+
+        HRESULT resInvoke = pDisp->Invoke(
+                                            dispid, // DISPID
+                                            IID_NULL_,
+                                            GetUserDefaultLCID(),
+                                            DISPATCH_METHOD,
+                                            &dispparamsNoArgs,
+                                            NULL,
+                                            NULL,
+                                            NULL
+                                        );
+        if (!(SUCCEEDED(resInvoke)))
+        {
+          std::cout<<"No invoke"<<std::endl;
+        }
+      }
+
+      PCF->Release();
+      iex->Release();
+      iey->Release();
+      pDisp->Release();
+
+    CoUninitialize();
 
     return 0;
 }
